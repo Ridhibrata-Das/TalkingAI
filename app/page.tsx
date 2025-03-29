@@ -48,28 +48,38 @@ export default function Home() {
   }, []);
 
   return (
-    <>
-      <h1 className="text-4xl font-bold text-zinc-800 p-8 pb-0">
+    <div className="min-h-screen w-full bg-gray-50">
+      <h1 className="text-2xl md:text-4xl font-bold text-zinc-800 p-4 md:p-8 text-center">
         Multimodal Live Chat
       </h1>
-      <div className="flex gap-8 p-8">
-        <CameraPreview onTranscription={handleTranscription} />
-
-        <div className="w-[640px] bg-white">
-          <ScrollArea className="h-[540px] p-6">
-            <div className="space-y-6">
-              <GeminiMessage text="Hi! I'm Gemini. I can see and hear you. Let's chat!" />
-              {messages.map((message, index) => (
-                message.type === 'human' ? (
-                  <HumanMessage key={`msg-${index}`} text={message.text} />
-                ) : (
-                  <GeminiMessage key={`msg-${index}`} text={message.text} />
-                )
-              ))}
+      
+      {/* Main content container */}
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+          {/* Camera preview section - takes full width on mobile, left side on desktop */}
+          <div className="w-full lg:w-1/2">
+            <div className="sticky top-4">
+              <CameraPreview onTranscription={handleTranscription} />
             </div>
-          </ScrollArea>
+          </div>
+
+          {/* Chat section - takes full width on mobile, right side on desktop */}
+          <div className="w-full lg:w-1/2 bg-white rounded-xl shadow-sm">
+            <ScrollArea className="h-[400px] md:h-[540px] p-4 md:p-6">
+              <div className="space-y-6">
+                <GeminiMessage text="Hi! I'm Gemini. I can see and hear you. Let's chat!" />
+                {messages.map((message, index) => (
+                  message.type === 'human' ? (
+                    <HumanMessage key={`msg-${index}`} text={message.text} />
+                  ) : (
+                    <GeminiMessage key={`msg-${index}`} text={message.text} />
+                  )
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
