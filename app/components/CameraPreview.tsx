@@ -18,6 +18,7 @@ export default function CameraPreview({ onTranscription }: CameraPreviewProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isFrontCamera, setIsFrontCamera] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
   const geminiWsRef = useRef<GeminiWebSocket | null>(null);
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -101,6 +102,51 @@ export default function CameraPreview({ onTranscription }: CameraPreviewProps) {
         console.error('Error accessing media devices:', err);
         cleanupAudio();
       }
+    }
+  };
+
+  const toggleCameraFacing = async () => {
+    if (!isStreaming) return;
+    
+    // Stop current stream
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+
+    try {
+      // Get new video stream with opposite facing mode
+      const newVideoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: isFrontCamera ? 'environment' : 'user'
+        },
+        audio: false
+      });
+
+      // Get audio stream
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          autoGainControl: true,
+          noiseSuppression: true,
+        }
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = newVideoStream;
+        videoRef.current.muted = true;
+      }
+
+      const combinedStream = new MediaStream([
+        ...newVideoStream.getTracks(),
+        ...audioStream.getTracks()
+      ]);
+
+      setStream(combinedStream);
+      setIsFrontCamera(!isFrontCamera);
+    } catch (err) {
+      console.error('Error switching camera:', err);
     }
   };
 
@@ -263,49 +309,83 @@ export default function CameraPreview({ onTranscription }: CameraPreviewProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
+    <div className="space-y-6">
+      <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gradient-to-b from-gray-900 to-gray-800 p-1">
         <video
           ref={videoRef}
           autoPlay
           playsInline
-          className="w-[640px] h-[480px] bg-muted rounded-lg overflow-hidden"
+          className="w-[640px] h-[480px] rounded-lg overflow-hidden object-cover bg-black/20"
         />
         
         {/* Connection Status Overlay */}
         {isStreaming && connectionStatus !== 'connected' && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg backdrop-blur-sm">
-            <div className="text-center space-y-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto" />
-              <p className="text-white font-medium">
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg backdrop-blur-sm transition-all duration-300">
+            <div className="text-center space-y-3 px-6 py-4 bg-black/40 rounded-2xl backdrop-blur-md">
+              <div className="animate-spin rounded-full h-10 w-10 border-3 border-white border-t-transparent mx-auto" />
+              <p className="text-white font-semibold text-lg">
                 {connectionStatus === 'connecting' ? 'Connecting to Gemini...' : 'Disconnected'}
               </p>
-              <p className="text-white/70 text-sm">
+              <p className="text-white/80 text-sm">
                 Please wait while we establish a secure connection
               </p>
             </div>
           </div>
         )}
 
-        <Button
-          onClick={toggleCamera}
-          size="icon"
-          className={`absolute left-1/2 bottom-4 -translate-x-1/2 rounded-full w-12 h-12 backdrop-blur-sm transition-colors
-            ${isStreaming 
-              ? 'bg-red-500/50 hover:bg-red-500/70 text-white' 
-              : 'bg-green-500/50 hover:bg-green-500/70 text-white'
-            }`}
-        >
-          {isStreaming ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
-        </Button>
+        {/* Control Buttons Container */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center space-x-4">
+          {/* Camera Toggle Button */}
+          <Button
+            onClick={toggleCamera}
+            size="icon"
+            className={`rounded-full w-14 h-14 shadow-lg backdrop-blur-md transition-all duration-300 transform hover:scale-105
+              ${isStreaming 
+                ? 'bg-red-500/80 hover:bg-red-600/90 text-white' 
+                : 'bg-emerald-500/80 hover:bg-emerald-600/90 text-white'
+              }`}
+          >
+            {isStreaming ? 
+              <VideoOff className="h-7 w-7 transition-transform duration-200" /> : 
+              <Video className="h-7 w-7 transition-transform duration-200" />
+            }
+          </Button>
+
+          {/* Front/Back Camera Toggle */}
+          {isStreaming && (
+            <Button
+              onClick={toggleCameraFacing}
+              size="icon"
+              className="rounded-full w-14 h-14 bg-white/20 hover:bg-white/30 text-white shadow-lg backdrop-blur-md transition-all duration-300 transform hover:scale-105"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="h-7 w-7 transition-transform duration-200"
+              >
+                <path d="M16 3h5v5" />
+                <path d="M8 21H3v-5" />
+                <path d="M21 3l-7 7" />
+                <path d="M3 21l7-7" />
+              </svg>
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Audio Level Indicator */}
       {isStreaming && (
-        <div className="w-[640px] h-2 rounded-full bg-green-100">
+        <div className="w-[640px] h-2.5 rounded-full bg-gray-200/10 overflow-hidden backdrop-blur-sm p-0.5">
           <div
-            className="h-full rounded-full transition-all bg-green-500"
+            className="h-full rounded-full transition-all bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg"
             style={{ 
               width: `${isModelSpeaking ? outputAudioLevel : audioLevel}%`,
-              transition: 'width 100ms ease-out'
+              transition: 'all 150ms ease-out'
             }}
           />
         </div>
