@@ -1,6 +1,6 @@
-# Multimodal Realtime App with Gemini 2.0 by Next.js Framework
+# Real-Time Webcam Object Detection
 
-A demonstration project showing how to build a realtime multimodal application using Google's Gemini 2.0 API and Next.js. This app can process audio, video, and generate transcripts in realtime.
+A demonstration project showing a realtime Real-Time Webcam Object Detection using Google's Gemini 2.0 API and Next.js. This app can process audio, video, and generate transcripts in realtime.
 
 
 ## Features
